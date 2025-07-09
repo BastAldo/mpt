@@ -1,0 +1,83 @@
+commit_message: "docs(status): Documentare bug critico di reset dello stato"
+rationale: |
+  In accordo con la strategia di progetto, questo commit non introduce fix, ma aggiorna la documentazione per riflettere accuratamente lo stato instabile attuale dell'applicazione.
+
+  1.  **Documentazione Stato Critico**: Il file `docs/05_STATUS.md` è stato aggiornato con una nuova sezione "Stato Attuale: CRITICO". Questa sezione descrive formalmente il bug più grave rilevato: il mancato reset dello stato del trainer dopo l'uscita dalla vista di debriefing, che porta a un'interfaccia non responsiva nelle sessioni successive.
+
+  2.  **Aggiornamento Versione di Tracciamento**: Il log di build in `src/main.js` è stato incrementato a `3.0.1` per avere un riferimento preciso a questa versione documentata e instabile, facilitando i futuri interventi di correzione.
+
+  Questo intervento crea una fotografia fedele dello stato del progetto, inclusi i problemi noti, fornendo una base solida per la pianificazione dei prossimi cicli di sviluppo.
+patches:
+  - file: src/main.js
+    content: |
+      console.log('%cMTP Build: 3.0.1 - Stato Instabile Documentato', 'color: #orange; font-size: 1.2em; font-weight: bold;');
+      import store from './modules/store.js';
+      import { init as initCalendarView } from './views/CalendarView.js';
+      import { init as initTrainerView } from './views/TrainerView.js';
+      import { init as initDebriefingView } from './views/DebriefingView.js';
+      import { init as initModal } from './ui/Modal.js';
+      import { init as initNotice } from './ui/Notice.js';
+      import { loadFromStorage, saveToStorage } from './modules/storage.js';
+
+      const WORKOUTS_STORAGE_KEY = 'workouts';
+
+      const views = {
+          calendar: document.getElementById('calendar-view'),
+          trainer: document.getElementById('trainer-view'),
+          debriefing: document.getElementById('debriefing-view'),
+      };
+      const initializedViews = new Set();
+
+      function initializeApp() {
+        let workouts = loadFromStorage(WORKOUTS_STORAGE_KEY);
+        if (!workouts) {
+          workouts = {};
+          saveToStorage(WORKOUTS_STORAGE_KEY, workouts);
+        }
+        store.dispatch({ type: 'SET_WORKOUTS', payload: workouts });
+
+        initCalendarView(views.calendar);
+        initializedViews.add('calendar');
+        initModal(document.getElementById('modal-container'));
+        initNotice(document.getElementById('notice-container'));
+      }
+
+      function handleViewChange() {
+        const { currentView } = store.getState();
+        const newActiveViewEl = views[currentView];
+
+        if (newActiveViewEl && newActiveViewEl.id !== store.currentActiveViewId) {
+          const oldView = document.querySelector('.view--active');
+          if(oldView) oldView.classList.remove('view--active');
+          
+          newActiveViewEl.classList.add('view--active');
+          store.currentActiveViewId = newActiveViewEl.id;
+
+          if (!initializedViews.has(currentView)) {
+            if (currentView === 'trainer') initTrainerView(views.trainer);
+            else if (currentView === 'debriefing') initDebriefingView(views.debriefing);
+            initializedViews.add(currentView);
+          }
+        }
+      }
+
+      store.subscribe(handleViewChange);
+      initializeApp();
+  - file: docs/05_STATUS.md
+    content: |
+      # Stato Attuale del Progetto
+      *Ultimo aggiornamento: 2025-07-04*
+
+      ## Stato Attuale: CRITICO
+
+      L'applicazione si trova in uno stato instabile a causa di una regressione critica. Sebbene le funzionalità di base del trainer siano state implementate come da architettura, è emerso un bug che compromette l'usabilità dell'applicazione dopo il primo ciclo di utilizzo.
+
+      ### Bug Rilevati
+
+      -   **Mancato Reset dello Stato del Trainer (Criticità Alta):**
+          -   **Descrizione:** Dopo aver completato un allenamento e aver interagito con la vista di "Debriefing", lo stato interno del modulo `trainer` non viene resettato correttamente.
+          -   **Conseguenza:** Al ritorno alla vista "Calendario", l'applicazione diventa non responsiva. Qualsiasi tentativo di avviare un nuovo allenamento fallisce, poiché parte da uno stato "sporco" e inconsistente. Questo rende di fatto l'applicazione utilizzabile una sola volta per sessione di ricaricamento della pagina.
+
+      L'obiettivo primario del prossimo ciclo di sviluppo sarà la risoluzione di questo bug critico per ripristinare la stabilità dell'applicazione.
+commands:
+  - "echo 'Documentazione aggiornata. Lo stato critico è stato formalizzato.'"

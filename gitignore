@@ -1,0 +1,19 @@
+# Dependencies
+/node_modules
+
+# Build artifacts
+/dist
+/build
+
+# IDE / Editor specific
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS specific
+.DS_Store
+Thumbs.db
