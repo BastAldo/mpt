@@ -1,83 +1,78 @@
-commit_message: "docs(status): Documentare bug critico di reset dello stato"
+commit_message: "docs: Create foundational architecture and API contract"
 rationale: |
-  In accordo con la strategia di progetto, questo commit non introduce fix, ma aggiorna la documentazione per riflettere accuratamente lo stato instabile attuale dell'applicazione.
+  This commit establishes the strategic foundation for the new project within the `mio_trainer_docs` repository.
 
-  1.  **Documentazione Stato Critico**: Il file `docs/05_STATUS.md` è stato aggiornato con una nuova sezione "Stato Attuale: CRITICO". Questa sezione descrive formalmente il bug più grave rilevato: il mancato reset dello stato del trainer dopo l'uscita dalla vista di debriefing, che porta a un'interfaccia non responsiva nelle sessioni successive.
+  1.  **Architectural Blueprint**: A new `docs/ARCHITECTURE.md` is created to formally document our decision to use a 3-repository architecture (`docs`, `api`, `app`). This serves as the primary architectural guide.
 
-  2.  **Aggiornamento Versione di Tracciamento**: Il log di build in `src/main.js` è stato incrementato a `3.0.1` per avere un riferimento preciso a questa versione documentata e instabile, facilitando i futuri interventi di correzione.
+  2.  **API Contract**: A new `docs/API_CONTRACT.md` is created. This file is the cornerstone for decoupling the frontend and backend and will define the communication between them.
 
-  Questo intervento crea una fotografia fedele dello stato del progetto, inclusi i problemi noti, fornendo una base solida per la pianificazione dei prossimi cicli di sviluppo.
+  These two documents provide a clean and robust starting point for the project, in line with the Principle of Maximum Granularity.
 patches:
-  - file: src/main.js
-    content: |
-      console.log('%cMTP Build: 3.0.1 - Stato Instabile Documentato', 'color: #orange; font-size: 1.2em; font-weight: bold;');
-      import store from './modules/store.js';
-      import { init as initCalendarView } from './views/CalendarView.js';
-      import { init as initTrainerView } from './views/TrainerView.js';
-      import { init as initDebriefingView } from './views/DebriefingView.js';
-      import { init as initModal } from './ui/Modal.js';
-      import { init as initNotice } from './ui/Notice.js';
-      import { loadFromStorage, saveToStorage } from './modules/storage.js';
+  - file: "docs/ARCHITECTURE.md"
+    actions:
+      - type: "CREATE"
+        content: |
+          # Project Architecture
 
-      const WORKOUTS_STORAGE_KEY = 'workouts';
+          *Status: Approved*
 
-      const views = {
-          calendar: document.getElementById('calendar-view'),
-          trainer: document.getElementById('trainer-view'),
-          debriefing: document.getElementById('debriefing-view'),
-      };
-      const initializedViews = new Set();
+          ## 1. Overview
 
-      function initializeApp() {
-        let workouts = loadFromStorage(WORKOUTS_STORAGE_KEY);
-        if (!workouts) {
-          workouts = {};
-          saveToStorage(WORKOUTS_STORAGE_KEY, workouts);
-        }
-        store.dispatch({ type: 'SET_WORKOUTS', payload: workouts });
+          This project adopts a **multi-repo** architecture based on three distinct and specialized repositories. This decision was made to apply the **Principle of Maximum Granularity** and to proactively address the constraints related to the AI assistant's context window during development.
 
-        initCalendarView(views.calendar);
-        initializedViews.add('calendar');
-        initModal(document.getElementById('modal-container'));
-        initNotice(document.getElementById('notice-container'));
-      }
+          The three repositories are:
 
-      function handleViewChange() {
-        const { currentView } = store.getState();
-        const newActiveViewEl = views[currentView];
+          1.  **`mio_trainer_docs`**: The strategic brain. It contains all documentation, specifications, and the API contract. It is the Single Source of Truth for the design.
+          2.  **`mio_trainer_api`**: The engine. It contains the backend implementation (API server) in Rust with Axum.
+          3.  **`mio_trainer_app`**: The interface. It contains the frontend implementation (WASM) in Rust with Leptos.
 
-        if (newActiveViewEl && newActiveViewEl.id !== store.currentActiveViewId) {
-          const oldView = document.querySelector('.view--active');
-          if(oldView) oldView.classList.remove('view--active');
-          
-          newActiveViewEl.classList.add('view--active');
-          store.currentActiveViewId = newActiveViewEl.id;
+          ## 2. Workflow
 
-          if (!initializedViews.has(currentView)) {
-            if (currentView === 'trainer') initTrainerView(views.trainer);
-            else if (currentView === 'debriefing') initDebriefingView(views.debriefing);
-            initializedViews.add(currentView);
+          Development is contract-driven. Any new feature requiring communication between the frontend and backend must first be defined and approved in the `API_CONTRACT.md` file within the `mio_trainer_docs` repository.
+
+  - file: "docs/API_CONTRACT.md"
+    actions:
+      - type: "CREATE"
+        content: |
+          # API Contract v1
+
+          This document defines the application programming interface (API) for "Mio Trainer Personale". The frontend and backend MUST strictly adhere to these specifications.
+
+          **Base URL:** `(to be defined)`
+
+          ---
+
+          ## Common Data Types
+
+          ### Workout
+          ```json
+          {
+            "date": "YYYY-MM-DD",
+            "items": [
+              // Array of Exercise or Rest objects
+            ]
           }
-        }
-      }
+          ```
 
-      store.subscribe(handleViewChange);
-      initializeApp();
-  - file: docs/05_STATUS.md
-    content: |
-      # Stato Attuale del Progetto
-      *Ultimo aggiornamento: 2025-07-04*
+          ### Exercise
+          ```json
+          {
+            "type": "exercise",
+            "name": "Exercise Name",
+            "duration": 60 // in seconds
+          }
+          ```
 
-      ## Stato Attuale: CRITICO
+          ### Rest
+          ```json
+          {
+            "type": "rest",
+            "duration": 30 // in seconds
+          }
+          ```
 
-      L'applicazione si trova in uno stato instabile a causa di una regressione critica. Sebbene le funzionalità di base del trainer siano state implementate come da architettura, è emerso un bug che compromette l'usabilità dell'applicazione dopo il primo ciclo di utilizzo.
+          ---
 
-      ### Bug Rilevati
+          ## Endpoints
 
-      -   **Mancato Reset dello Stato del Trainer (Criticità Alta):**
-          -   **Descrizione:** Dopo aver completato un allenamento e aver interagito con la vista di "Debriefing", lo stato interno del modulo `trainer` non viene resettato correttamente.
-          -   **Conseguenza:** Al ritorno alla vista "Calendario", l'applicazione diventa non responsiva. Qualsiasi tentativo di avviare un nuovo allenamento fallisce, poiché parte da uno stato "sporco" e inconsistente. Questo rende di fatto l'applicazione utilizzabile una sola volta per sessione di ricaricamento della pagina.
-
-      L'obiettivo primario del prossimo ciclo di sviluppo sarà la risoluzione di questo bug critico per ripristinare la stabilità dell'applicazione.
-commands:
-  - "echo 'Documentazione aggiornata. Lo stato critico è stato formalizzato.'"
+          *(No endpoints defined yet)*
