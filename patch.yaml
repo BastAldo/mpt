@@ -1,119 +1,144 @@
-commit_message: "feat: Initial setup of mio_trainer_api server"
+commit_message: "docs: Document CI/CD strategy and create API setup blueprint"
 rationale: |
-  This commit scaffolds the entire basic structure for the `mio_trainer_api` server using the Axum framework. It establishes a runnable and testable baseline for the project.
+  This commit formalizes the project's deployment strategy and prepares a detailed setup guide for the API repository, adhering to our principle of separating strategic documentation from implementation blueprints.
 
-  Key components created:
-  - `Cargo.toml`: Defines project dependencies (Axum, Tokio, Serde, Tower-HTTP).
-  - `.gitignore`: Ignores the `/target` build directory, following best practices.
-  - `src/models.rs`: Contains the core data structures (`Workout`, `Exercise`, `Rest`) shared with the API contract.
-  - `src/handlers.rs`: Implements the first route handler (`get_workout_by_date`) with mock/hardcoded data for initial testing.
-  - `src/main.rs`: Configures and launches the Axum server, sets up routing, and includes a permissive CORS policy for development.
+  1.  **Update ARCHITECTURE.md**: The main architecture document is updated with a new "Deployment Strategy" section. This records our high-level decision to use a CI/CD pipeline with GitHub Actions, Nginx, and systemd.
+
+  2.  **Create SETUP_API_REPOSITORY.md**: A new, detailed blueprint file is created. It contains all the necessary code and step-by-step instructions for the initial setup of the `mio_trainer_api` repository, including Nginx configuration, the systemd service file, and the GitHub Actions workflow. This file will serve as the single source of truth for bootstrapping the backend project.
 patches:
-  - file: ".gitignore"
+  - file: "docs/ARCHITECTURE.md"
     content: |
-      # Ignore the build output directory
-      /target
+      # Project Architecture
 
-      # Ignore Cargo's lock file to avoid conflicts in this collaborative setup,
-      # though it's typically committed in team projects.
-      Cargo.lock
-  - file: "Cargo.toml"
+      *Status: Approved*
+
+      ## 1. Overview
+
+      This project adopts a **multi-repo** architecture based on three distinct and specialized repositories. This decision was made to apply the **Principle of Maximum Granularity** and to proactively address the constraints related to the AI assistant's context window during development.
+
+      The three repositories are:
+
+      1.  **`mio_trainer_docs`**: The strategic brain. It contains all documentation, specifications, and the API contract. It is the Single Source of Truth for the design.
+      2.  **`mio_trainer_api`**: The engine. It contains the backend implementation (API server) in Rust with Axum.
+      3.  **`mio_trainer_app`**: The interface. It contains the frontend implementation (WASM) in Rust with Leptos.
+
+      ## 2. Workflow
+
+      Development is contract-driven. Any new feature requiring communication between the frontend and backend must first be defined and approved in the `API_CONTRACT.md` file within the `mio_trainer_docs` repository.
+
+      ## 3. Deployment Strategy
+
+      The project utilizes a Continuous Integration & Continuous Deployment (CI/CD) pipeline for the backend API.
+
+      -   **Source Control**: `mio_trainer_api` repository on GitHub.
+      -   **Automation**: GitHub Actions is used to automate the build and deploy process.
+      -   **Process**: On every push to the `main` branch, a workflow is triggered to compile the Rust application in a clean environment, creating a production-ready binary.
+      -   **Deployment**: The compiled binary is deployed to the production VPS using `rsync` over SSH.
+      -   **Runtime**: The application runs as a `systemd` service on the VPS for robustness and auto-restarts.
+      -   **Proxy**: `Nginx` is used as a reverse proxy to manage incoming traffic and route it to the application.
+
+  - file: "docs/SETUP_API_REPOSITORY.md"
     content: |
-      [package]
-      name = "mio_trainer_api"
-      version = "0.1.0"
-      edition = "2021"
+      # Blueprint: Initial Setup for `mio_trainer_api` Repository
 
-      [dependencies]
-      axum = "0.7"
-      tokio = { version = "1.0", features = ["full"] }
-      serde = { version = "1.0", features = ["derive"] }
-      serde_json = "1.0"
-      tower-http = { version = "0.5.0", features = ["cors"] }
-  - file: "src/models.rs"
-    content: |
-      use serde::{Deserialize, Serialize};
+      This document contains all necessary instructions and code to set up the `mio_trainer_api` repository from scratch.
 
-      #[derive(Debug, Serialize, Deserialize, Clone)]
-      #[serde(tag = "type", rename_all = "lowercase")]
-      pub enum WorkoutItem {
-          Exercise(Exercise),
-          Rest(Rest),
+      ---
+
+      ## Part 1: GitHub Repository Setup
+
+      ### 1.1. Create Repository Secrets
+      In the `mio_trainer_api` repository on GitHub, navigate to `Settings > Secrets and variables > Actions` and create the following "Repository secrets":
+
+      -   `VPS_HOST`: The IP address of your VPS.
+      -   `VPS_USER`: The username for SSH connection (e.g., `root`).
+      -   `VPS_SSH_PRIVATE_KEY`: The full content of the private SSH key authorized for passwordless login on the VPS.
+      -   `VPS_TARGET_PATH`: The absolute path on the VPS where the compiled binary will be stored. **This path must match the one in the systemd service file.** (e.g., `/home/your_user/app/mio_trainer_api`).
+
+      ### 1.2. Create the Deploy Workflow File
+      Create the file `.github/workflows/deploy.yml` with the following content:
+
+      ```yaml
+      # Workflow name
+      name: Deploy API to VPS
+
+      # Trigger this workflow on every push to the main branch
+      on:
+        push:
+          branches:
+            - main
+
+      jobs:
+        deploy:
+          runs-on: ubuntu-latest
+
+          steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup Rust
+              uses: actions-rust-lang/setup-rust-toolchain@v1
+
+            - name: Build Rust binary
+              run: cargo build --release
+
+            - name: Deploy to VPS
+              uses: easingthemes/ssh-deploy@main
+              with:
+                SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+                REMOTE_HOST: ${{ secrets.VPS_HOST }}
+                REMOTE_USER: ${{ secrets.VPS_USER }}
+                SOURCE: "./target/release/mio_trainer_api"
+                TARGET: ${{ secrets.VPS_TARGET_PATH }}
+                SCRIPT_AFTER: |
+                  echo "Restarting the API service..."
+                  sudo systemctl restart mio_trainer_api.service
+                  echo "Service restarted."
+      ```
+
+      ---
+
+      ## Part 2: VPS Server Setup
+
+      ### 2.1. Nginx Configuration
+      The file `/etc/nginx/sites-available/mpt.api.ap0.it` should already exist and be configured as a reverse proxy. Its content should be:
+
+      ```nginx
+      server {
+          listen 80;
+          listen [::]:80;
+
+          server_name mtp.api.ap0.it;
+
+          location / {
+              proxy_pass [http://127.0.0.1:3000](http://127.0.0.1:3000);
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+          }
       }
+      ```
 
-      #[derive(Debug, Serialize, Deserialize, Clone)]
-      pub struct Exercise {
-          pub name: String,
-          pub duration: u32, // in seconds
-      }
+      ### 2.2. systemd Service Configuration
+      Create the file `/etc/systemd/system/mio_trainer_api.service` on the VPS with the following content. **Ensure the paths match `VPS_TARGET_PATH`**.
 
-      #[derive(Debug, Serialize, Deserialize, Clone)]
-      pub struct Rest {
-          pub duration: u32, // in seconds
-      }
+      ```ini
+      [Unit]
+      Description=Mio Trainer API Service
+      After=network.target
 
-      #[derive(Debug, Serialize, Deserialize, Clone)]
-      pub struct Workout {
-          pub date: String, // YYYY-MM-DD
-          pub items: Vec<WorkoutItem>,
-      }
-  - file: "src/handlers.rs"
-    content: |
-      use axum::{extract::Path, Json};
-      use crate::models::{Exercise, Rest, Workout, WorkoutItem};
+      [Service]
+      User=your_user # Replace with your actual username
+      Group=www-data
 
-      /// Handler to get a workout for a specific date.
-      /// For now, it returns a hardcoded mock workout.
-      pub async fn get_workout_by_date(Path(date): Path<String>) -> Json<Workout> {
-          println!("->> GET /api/v1/workouts/{}", date);
+      # This path MUST match the VPS_TARGET_PATH secret in GitHub
+      WorkingDirectory=/home/your_user/app/mio_trainer_api
+      ExecStart=/home/your_user/app/mio_trainer_api/mio_trainer_api
 
-          // Mock data for demonstration purposes
-          let mock_workout = Workout {
-              date: date,
-              items: vec![
-                  WorkoutItem::Exercise(Exercise {
-                      name: "Push Ups".to_string(),
-                      duration: 60,
-                  }),
-                  WorkoutItem::Rest(Rest { duration: 30 }),
-                  WorkoutItem::Exercise(Exercise {
-                      name: "Squats".to_string(),
-                      duration: 90,
-                  }),
-              ],
-          };
+      Restart=always
 
-          Json(mock_workout)
-      }
-  - file: "src/main.rs"
-    content: |
-      use axum::{routing::get, Router};
-      use tower_http::cors::{Any, CorsLayer};
-
-      mod handlers;
-      mod models;
-
-      #[tokio::main]
-      async fn main() {
-          // Define a permissive CORS layer for development.
-          // This allows our future WASM frontend to make requests to this API.
-          let cors = CorsLayer::new()
-              .allow_origin(Any)
-              .allow_methods(Any)
-              .allow_headers(Any);
-
-          // Create the main router for our application.
-          let app = Router::new()
-              .route("/api/v1/workouts/:date", get(handlers::get_workout_by_date))
-              .layer(cors);
-
-          // Define the server address.
-          let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
-              .await
-              .unwrap();
-          
-          println!("->> LISTENING on http://{}", listener.local_addr().unwrap());
-
-          // Start the server.
-          axum::serve(listener, app).await.unwrap();
-      }
+      [Install]
+      WantedBy=multi-user.target
+      ```
+      After creating the file, run `sudo systemctl daemon-reload` on the VPS.

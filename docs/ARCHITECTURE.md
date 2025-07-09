@@ -15,3 +15,14 @@ The three repositories are:
 ## 2. Workflow
 
 Development is contract-driven. Any new feature requiring communication between the frontend and backend must first be defined and approved in the `API_CONTRACT.md` file within the `mio_trainer_docs` repository.
+
+## 3. Deployment Strategy
+
+The project utilizes a Continuous Integration & Continuous Deployment (CI/CD) pipeline for the backend API.
+
+-   **Source Control**: `mio_trainer_api` repository on GitHub.
+-   **Automation**: GitHub Actions is used to automate the build and deploy process.
+-   **Process**: On every push to the `main` branch, a workflow is triggered to compile the Rust application in a clean environment, creating a production-ready binary.
+-   **Deployment**: The compiled binary is deployed to the production VPS using `rsync` over SSH.
+-   **Runtime**: The application runs as a `systemd` service on the VPS for robustness and auto-restarts.
+-   **Proxy**: `Nginx` is used as a reverse proxy to manage incoming traffic and route it to the application.
