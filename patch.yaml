@@ -1,73 +1,119 @@
-commit_message: "feat(docs): Define core workout API endpoints"
+commit_message: "feat: Initial setup of mio_trainer_api server"
 rationale: |
-  This commit updates the API contract with the first two critical endpoints, enabling the core functionality of the application.
+  This commit scaffolds the entire basic structure for the `mio_trainer_api` server using the Axum framework. It establishes a runnable and testable baseline for the project.
 
-  1.  **GET /api/v1/workouts/{date}**: Defined to allow fetching a workout for a specific date.
-  2.  **POST /api/v1/workouts/{date}**: Defined to allow saving or updating a workout for a specific date.
-
-  This provides a clear and actionable specification for the initial development of both the API and the frontend application, following our contract-driven approach.
+  Key components created:
+  - `Cargo.toml`: Defines project dependencies (Axum, Tokio, Serde, Tower-HTTP).
+  - `.gitignore`: Ignores the `/target` build directory, following best practices.
+  - `src/models.rs`: Contains the core data structures (`Workout`, `Exercise`, `Rest`) shared with the API contract.
+  - `src/handlers.rs`: Implements the first route handler (`get_workout_by_date`) with mock/hardcoded data for initial testing.
+  - `src/main.rs`: Configures and launches the Axum server, sets up routing, and includes a permissive CORS policy for development.
 patches:
-  - file: "docs/API_CONTRACT.md"
+  - file: ".gitignore"
     content: |
-      # API Contract v1
+      # Ignore the build output directory
+      /target
 
-      This document defines the application programming interface (API) for "Mio Trainer Personale". The frontend and backend MUST strictly adhere to these specifications.
+      # Ignore Cargo's lock file to avoid conflicts in this collaborative setup,
+      # though it's typically committed in team projects.
+      Cargo.lock
+  - file: "Cargo.toml"
+    content: |
+      [package]
+      name = "mio_trainer_api"
+      version = "0.1.0"
+      edition = "2021"
 
-      **Base URL:** `(to be defined)`
+      [dependencies]
+      axum = "0.7"
+      tokio = { version = "1.0", features = ["full"] }
+      serde = { version = "1.0", features = ["derive"] }
+      serde_json = "1.0"
+      tower-http = { version = "0.5.0", features = ["cors"] }
+  - file: "src/models.rs"
+    content: |
+      use serde::{Deserialize, Serialize};
 
-      ---
-
-      ## Common Data Types
-
-      ### Workout
-      ```json
-      {
-        "date": "YYYY-MM-DD",
-        "items": [
-          // Array of Exercise or Rest objects
-        ]
+      #[derive(Debug, Serialize, Deserialize, Clone)]
+      #[serde(tag = "type", rename_all = "lowercase")]
+      pub enum WorkoutItem {
+          Exercise(Exercise),
+          Rest(Rest),
       }
-      ```
 
-      ### Exercise
-      ```json
-      {
-        "type": "exercise",
-        "name": "Exercise Name",
-        "duration": 60 // in seconds
+      #[derive(Debug, Serialize, Deserialize, Clone)]
+      pub struct Exercise {
+          pub name: String,
+          pub duration: u32, // in seconds
       }
-      ```
 
-      ### Rest
-      ```json
-      {
-        "type": "rest",
-        "duration": 30 // in seconds
+      #[derive(Debug, Serialize, Deserialize, Clone)]
+      pub struct Rest {
+          pub duration: u32, // in seconds
       }
-      ```
 
-      ---
+      #[derive(Debug, Serialize, Deserialize, Clone)]
+      pub struct Workout {
+          pub date: String, // YYYY-MM-DD
+          pub items: Vec<WorkoutItem>,
+      }
+  - file: "src/handlers.rs"
+    content: |
+      use axum::{extract::Path, Json};
+      use crate::models::{Exercise, Rest, Workout, WorkoutItem};
 
-      ## Endpoints
+      /// Handler to get a workout for a specific date.
+      /// For now, it returns a hardcoded mock workout.
+      pub async fn get_workout_by_date(Path(date): Path<String>) -> Json<Workout> {
+          println!("->> GET /api/v1/workouts/{}", date);
 
-      ### Get Workout by Date
-      - **Endpoint:** `GET /api/v1/workouts/{date}`
-      - **Description:** Retrieves the workout plan for a specific date.
-      - **URL Parameters:**
-        - `{date}`: The date of the workout in `YYYY-MM-DD` format.
-      - **Success Response (200 OK):**
-        - **Body:** A `Workout` object. If no workout exists for that date, returns a `Workout` object with an empty `items` array.
-      - **Error Response (400 Bad Request):**
-        - **Reason:** The date format is invalid.
+          // Mock data for demonstration purposes
+          let mock_workout = Workout {
+              date: date,
+              items: vec![
+                  WorkoutItem::Exercise(Exercise {
+                      name: "Push Ups".to_string(),
+                      duration: 60,
+                  }),
+                  WorkoutItem::Rest(Rest { duration: 30 }),
+                  WorkoutItem::Exercise(Exercise {
+                      name: "Squats".to_string(),
+                      duration: 90,
+                  }),
+              ],
+          };
 
-      ### Save Workout by Date
-      - **Endpoint:** `POST /api/v1/workouts/{date}`
-      - **Description:** Creates or replaces the workout plan for a specific date.
-      - **URL Parameters:**
-        - `{date}`: The date of the workout in `YYYY-MM-DD` format.
-      - **Request Body:**
-        - A `Workout` object. The `date` in the body must match the date in the URL.
-      - **Success Response (204 No Content):**
-        - **Body:** Empty. Indicates the workout was saved successfully.
-      - **Error Response (400 Bad Request):**
-        - **Reason:** The date format is invalid or the request body is malformed.
+          Json(mock_workout)
+      }
+  - file: "src/main.rs"
+    content: |
+      use axum::{routing::get, Router};
+      use tower_http::cors::{Any, CorsLayer};
+
+      mod handlers;
+      mod models;
+
+      #[tokio::main]
+      async fn main() {
+          // Define a permissive CORS layer for development.
+          // This allows our future WASM frontend to make requests to this API.
+          let cors = CorsLayer::new()
+              .allow_origin(Any)
+              .allow_methods(Any)
+              .allow_headers(Any);
+
+          // Create the main router for our application.
+          let app = Router::new()
+              .route("/api/v1/workouts/:date", get(handlers::get_workout_by_date))
+              .layer(cors);
+
+          // Define the server address.
+          let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
+              .await
+              .unwrap();
+          
+          println!("->> LISTENING on http://{}", listener.local_addr().unwrap());
+
+          // Start the server.
+          axum::serve(listener, app).await.unwrap();
+      }
