@@ -1,0 +1,19 @@
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# IDE and editor configuration
+.vscode/
+.idea/
+*.swp
