@@ -39,4 +39,24 @@ This document defines the application programming interface (API) for "Mio Train
 
 ## Endpoints
 
-*(No endpoints defined yet)*
+### Get Workout by Date
+- **Endpoint:** `GET /api/v1/workouts/{date}`
+- **Description:** Retrieves the workout plan for a specific date.
+- **URL Parameters:**
+  - `{date}`: The date of the workout in `YYYY-MM-DD` format.
+- **Success Response (200 OK):**
+  - **Body:** A `Workout` object. If no workout exists for that date, returns a `Workout` object with an empty `items` array.
+- **Error Response (400 Bad Request):**
+  - **Reason:** The date format is invalid.
+
+### Save Workout by Date
+- **Endpoint:** `POST /api/v1/workouts/{date}`
+- **Description:** Creates or replaces the workout plan for a specific date.
+- **URL Parameters:**
+  - `{date}`: The date of the workout in `YYYY-MM-DD` format.
+- **Request Body:**
+  - A `Workout` object. The `date` in the body must match the date in the URL.
+- **Success Response (204 No Content):**
+  - **Body:** Empty. Indicates the workout was saved successfully.
+- **Error Response (400 Bad Request):**
+  - **Reason:** The date format is invalid or the request body is malformed.

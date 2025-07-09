@@ -1,32 +1,12 @@
-commit_message: "docs: Create foundational architecture and API contract"
+commit_message: "feat(docs): Define core workout API endpoints"
 rationale: |
-  This commit establishes the strategic foundation for the new project.
+  This commit updates the API contract with the first two critical endpoints, enabling the core functionality of the application.
 
-  1.  **Architectural Blueprint**: Creates `docs/ARCHITECTURE.md` to formally document the 3-repository architecture.
-  2.  **API Contract**: Creates `docs/API_CONTRACT.md` to define the frontend-backend communication contract.
+  1.  **GET /api/v1/workouts/{date}**: Defined to allow fetching a workout for a specific date.
+  2.  **POST /api/v1/workouts/{date}**: Defined to allow saving or updating a workout for a specific date.
 
-  This corrected patch adheres to the simple `file`/`content` structure required by the patcher script.
+  This provides a clear and actionable specification for the initial development of both the API and the frontend application, following our contract-driven approach.
 patches:
-  - file: "docs/ARCHITECTURE.md"
-    content: |
-      # Project Architecture
-
-      *Status: Approved*
-
-      ## 1. Overview
-
-      This project adopts a **multi-repo** architecture based on three distinct and specialized repositories. This decision was made to apply the **Principle of Maximum Granularity** and to proactively address the constraints related to the AI assistant's context window during development.
-
-      The three repositories are:
-
-      1.  **`mio_trainer_docs`**: The strategic brain. It contains all documentation, specifications, and the API contract. It is the Single Source of Truth for the design.
-      2.  **`mio_trainer_api`**: The engine. It contains the backend implementation (API server) in Rust with Axum.
-      3.  **`mio_trainer_app`**: The interface. It contains the frontend implementation (WASM) in Rust with Leptos.
-
-      ## 2. Workflow
-
-      Development is contract-driven. Any new feature requiring communication between the frontend and backend must first be defined and approved in the `API_CONTRACT.md` file within the `mio_trainer_docs` repository.
-
   - file: "docs/API_CONTRACT.md"
     content: |
       # API Contract v1
@@ -70,4 +50,24 @@ patches:
 
       ## Endpoints
 
-      *(No endpoints defined yet)*
+      ### Get Workout by Date
+      - **Endpoint:** `GET /api/v1/workouts/{date}`
+      - **Description:** Retrieves the workout plan for a specific date.
+      - **URL Parameters:**
+        - `{date}`: The date of the workout in `YYYY-MM-DD` format.
+      - **Success Response (200 OK):**
+        - **Body:** A `Workout` object. If no workout exists for that date, returns a `Workout` object with an empty `items` array.
+      - **Error Response (400 Bad Request):**
+        - **Reason:** The date format is invalid.
+
+      ### Save Workout by Date
+      - **Endpoint:** `POST /api/v1/workouts/{date}`
+      - **Description:** Creates or replaces the workout plan for a specific date.
+      - **URL Parameters:**
+        - `{date}`: The date of the workout in `YYYY-MM-DD` format.
+      - **Request Body:**
+        - A `Workout` object. The `date` in the body must match the date in the URL.
+      - **Success Response (204 No Content):**
+        - **Body:** Empty. Indicates the workout was saved successfully.
+      - **Error Response (400 Bad Request):**
+        - **Reason:** The date format is invalid or the request body is malformed.
