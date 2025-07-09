@@ -1,78 +1,73 @@
 commit_message: "docs: Create foundational architecture and API contract"
 rationale: |
-  This commit establishes the strategic foundation for the new project within the `mio_trainer_docs` repository.
+  This commit establishes the strategic foundation for the new project.
 
-  1.  **Architectural Blueprint**: A new `docs/ARCHITECTURE.md` is created to formally document our decision to use a 3-repository architecture (`docs`, `api`, `app`). This serves as the primary architectural guide.
+  1.  **Architectural Blueprint**: Creates `docs/ARCHITECTURE.md` to formally document the 3-repository architecture.
+  2.  **API Contract**: Creates `docs/API_CONTRACT.md` to define the frontend-backend communication contract.
 
-  2.  **API Contract**: A new `docs/API_CONTRACT.md` is created. This file is the cornerstone for decoupling the frontend and backend and will define the communication between them.
-
-  These two documents provide a clean and robust starting point for the project, in line with the Principle of Maximum Granularity.
+  This corrected patch adheres to the simple `file`/`content` structure required by the patcher script.
 patches:
   - file: "docs/ARCHITECTURE.md"
-    actions:
-      - type: "CREATE"
-        content: |
-          # Project Architecture
+    content: |
+      # Project Architecture
 
-          *Status: Approved*
+      *Status: Approved*
 
-          ## 1. Overview
+      ## 1. Overview
 
-          This project adopts a **multi-repo** architecture based on three distinct and specialized repositories. This decision was made to apply the **Principle of Maximum Granularity** and to proactively address the constraints related to the AI assistant's context window during development.
+      This project adopts a **multi-repo** architecture based on three distinct and specialized repositories. This decision was made to apply the **Principle of Maximum Granularity** and to proactively address the constraints related to the AI assistant's context window during development.
 
-          The three repositories are:
+      The three repositories are:
 
-          1.  **`mio_trainer_docs`**: The strategic brain. It contains all documentation, specifications, and the API contract. It is the Single Source of Truth for the design.
-          2.  **`mio_trainer_api`**: The engine. It contains the backend implementation (API server) in Rust with Axum.
-          3.  **`mio_trainer_app`**: The interface. It contains the frontend implementation (WASM) in Rust with Leptos.
+      1.  **`mio_trainer_docs`**: The strategic brain. It contains all documentation, specifications, and the API contract. It is the Single Source of Truth for the design.
+      2.  **`mio_trainer_api`**: The engine. It contains the backend implementation (API server) in Rust with Axum.
+      3.  **`mio_trainer_app`**: The interface. It contains the frontend implementation (WASM) in Rust with Leptos.
 
-          ## 2. Workflow
+      ## 2. Workflow
 
-          Development is contract-driven. Any new feature requiring communication between the frontend and backend must first be defined and approved in the `API_CONTRACT.md` file within the `mio_trainer_docs` repository.
+      Development is contract-driven. Any new feature requiring communication between the frontend and backend must first be defined and approved in the `API_CONTRACT.md` file within the `mio_trainer_docs` repository.
 
   - file: "docs/API_CONTRACT.md"
-    actions:
-      - type: "CREATE"
-        content: |
-          # API Contract v1
+    content: |
+      # API Contract v1
 
-          This document defines the application programming interface (API) for "Mio Trainer Personale". The frontend and backend MUST strictly adhere to these specifications.
+      This document defines the application programming interface (API) for "Mio Trainer Personale". The frontend and backend MUST strictly adhere to these specifications.
 
-          **Base URL:** `(to be defined)`
+      **Base URL:** `(to be defined)`
 
-          ---
+      ---
 
-          ## Common Data Types
+      ## Common Data Types
 
-          ### Workout
-          ```json
-          {
-            "date": "YYYY-MM-DD",
-            "items": [
-              // Array of Exercise or Rest objects
-            ]
-          }
-          ```
+      ### Workout
+      ```json
+      {
+        "date": "YYYY-MM-DD",
+        "items": [
+          // Array of Exercise or Rest objects
+        ]
+      }
+      ```
 
-          ### Exercise
-          ```json
-          {
-            "type": "exercise",
-            "name": "Exercise Name",
-            "duration": 60 // in seconds
-          }
-          ```
+      ### Exercise
+      ```json
+      {
+        "type": "exercise",
+        "name": "Exercise Name",
+        "duration": 60 // in seconds
+      }
+      ```
 
-          ### Rest
-          ```json
-          {
-            "type": "rest",
-            "duration": 30 // in seconds
-          }
-          ```
+      ### Rest
+      ```json
+      {
+        "type": "rest",
+        "duration": 30 // in seconds
+      }
+      ```
 
-          ---
+      ---
 
-          ## Endpoints
+      ## Endpoints
 
-          *(No endpoints defined yet)*
+      *(No endpoints defined yet)*
