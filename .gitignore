@@ -1,6 +1,0 @@
-# Ignore the build output directory
-/target
-
-# Ignore Cargo's lock file to avoid conflicts in this collaborative setup,
-# though it's typically committed in team projects.
-Cargo.lock
